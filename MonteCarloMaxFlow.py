@@ -44,7 +44,7 @@ curve_plot_root = "Out/evacuation_curve" # suffix is "_{ue/so}_{base/mon}.png"
 TICK_SIZE = 15 #15 minutes
 Duration_Impact = 0.2   #Between 0 and 1, tells reduction in total incident durration due to crash
 DEMAND_MULT = 1
-num_samples = 2 # Number of Monte Carlo draws, must be > 1
+num_samples = 100 # Number of Monte Carlo draws, must be > 1
 
 
 base_params = { 'Collision Parameters': {
