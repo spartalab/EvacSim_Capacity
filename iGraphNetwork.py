@@ -142,7 +142,13 @@ class iGraphNetwork:
                       "link." % link)
                 raise BadNetworkException
                     
-
+    def LinearInterpolation(self, SO, UE, Routing_Impact):
+        """
+        updates capacities based on linear interpolation of UE and SO
+        """
+        for i in range(len(SO)):
+            for j in range(len(SO[i])): 
+                self.capacity[i][j] = (Routing_Impact)*SO[i][j] + (1-Routing_Impact)*UE[i][j]
 
     def UpdateCapacitiesFromBaseFlow(self, BaseFlow):
         """
@@ -177,8 +183,8 @@ class iGraphNetwork:
                     f"<FLOWS FILE> {flows_file}\n"    #flows and travel times
                     f"<DATA PATH>\n"
                     f"<FILE PATH>\n"
-                    f"<CONVERGENCE GAP> 1e-6\n"
-                    f"<MAX ITERATIONS> 20")
+                    f"<CONVERGENCE GAP> 1e-2\n"
+                    f"<MAX ITERATIONS> 10")
             os.system(f"./tap {tntp_params_file}")
 
             #Convert UE data to max-flow files, update to network. 
@@ -223,12 +229,14 @@ class iGraphNetwork:
                 if self.matrix[i][j] ==1:
                     ####################### GENERATE COLLISIONS ########################
                     params = self.All_Params['Collision Parameters']
-                    t = random.expovariate(params['incident rate']/100000000*self.BASE_capacity[i][j]*self.BASE_length[i][j]/5280)
+                    if params['incident rate'] == 0:
+                        t = 0
+                    else:
+                        t = random.expovariate(params['incident rate']/100000000*self.BASE_capacity[i][j]*self.BASE_length[i][j]/5280)
                     while t < params['time horizon']:
                         inc ={'start time':random.uniform(0, params['time horizon']),
-                             'duration':random.gammavariate(params['var duration']/params['mean duration'], params['mean duration']*params['mean duration']/params['var duration']), #mean = alpha*beta; variance = alpha*beta**2
-                             'capacity loss':max(0.2,random.betavariate(
-                                 params['alpha capacity loss'],params['beta capacity loss']))
+                             'duration':random.gammavariate(params['mean duration']*params['mean duration']/params['var duration'], params['var duration']/params['mean duration'])/60, #mean = alpha*beta; variance = alpha*beta**2
+                             'capacity loss':random.betavariate(params['alpha capacity loss'],params['beta capacity loss'])
                               }
                         self.number += 1
                         
@@ -246,13 +254,16 @@ class iGraphNetwork:
 
 
                     ####################### GENERATE DISABLED/ABANDONED ########################
+                    
                     params = self.All_Params['Disabled Parameters']
-                    t = random.expovariate(params['incident rate']/100000000*self.BASE_capacity[i][j]*self.BASE_length[i][j]/5280)
+                    if params['incident rate'] == 0:
+                        t = 0
+                    else:
+                        t = random.expovariate(params['incident rate']/100000000*self.BASE_capacity[i][j]*self.BASE_length[i][j]/5280)
                     while t < params['time horizon']:
                         inc ={'start time':random.uniform(0, params['time horizon']),
-                             'duration':random.gammavariate(params['var duration']/params['mean duration'], params['mean duration']*params['mean duration']/params['var duration']), #mean = alpha*beta; variance = alpha*beta**2
-                             'capacity loss':max(0.4,random.betavariate(
-                                 params['alpha capacity loss'],params['beta capacity loss']))
+                             'duration':random.gammavariate(params['mean duration']*params['mean duration']/params['var duration'], params['var duration']/params['mean duration'])/60, #mean = alpha*beta; variance = alpha*beta**2
+                             'capacity loss':random.betavariate(params['alpha capacity loss'],params['beta capacity loss'])
                               }
                         self.number += 1
                         

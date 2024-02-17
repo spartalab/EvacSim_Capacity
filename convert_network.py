@@ -66,7 +66,6 @@ def convertNewNet(TICK_SIZE, file_nl, file_dl, file_nf, file_lf):
 	for i in range(num_nodes + 1):
 	    net_file.write(",".join(net_matrix[i]) + "\n")
 
-
 def dta_to_tntp(evacsim_net, evacsim_demand, new_net):
     """
     Convert network from the evacsim format to the TNTP format for

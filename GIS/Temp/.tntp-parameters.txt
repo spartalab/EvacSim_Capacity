@@ -1,0 +1,7 @@
+<NETWORK FILE> GIS/Temp/.tntp-net.txt
+<TRIPS FILE> GIS/Temp/houston_input1.ods
+<FLOWS FILE> GIS/Temp/.flows.txt
+<DATA PATH>
+<FILE PATH>
+<CONVERGENCE GAP> 1e-2
+<MAX ITERATIONS> 10

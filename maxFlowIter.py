@@ -8,7 +8,7 @@ import numpy as np
 import convert_network
 import copy
 
-def InitializeMaxFlowIter(Demand, NET_FILE, LINKS_FILE, TICK_SIZE, incident_params, UEsim, demand_file, tntp_file, flows_file, tntp_params_file, link_data_file, coordinate, critical_plot, critical_link):
+def InitializeMaxFlowIter(Demand, NET_FILE, LINKS_FILE, TICK_SIZE, incident_params, Routing_Impact, UEsim, demand_file, tntp_file, flows_file, tntp_params_file, link_data_file, coordinate, critical_plot, critical_link):
     #---------------------------------------------------------------------------
     print("Initializing...")
     ###################### Initialize Net ###############################  
@@ -39,25 +39,34 @@ def InitializeMaxFlowIter(Demand, NET_FILE, LINKS_FILE, TICK_SIZE, incident_para
     
     ################### Run Simulation ############################################
     
-    while t<=288 or cumulative_arrive < cumulative_depart:        
+    while t<=288 or cumulative_arrive+0.01 < cumulative_depart:        
         ThisIn = 0
         for key in Demand[t]:
             ThisIn += Demand[t][key]
-                      
+                 
+        net.capacity = copy.deepcopy(net.BASE_capacity)
+        
+        net.UpdateCapacitiesFromDemand(demand_file, tntp_file, flows_file, tntp_params_file, t, Demand, 0, link_data_file)
+        b1, flow1 = net.maxFlow(source, sink) #b is total flow, flow is flow on each link
+        SO = copy.deepcopy(flow1)
+        
         net.UpdateCapacitiesFromDemand(demand_file, tntp_file, flows_file, tntp_params_file, t, Demand, UEsim, link_data_file)
         #net.apply_incidents(t,UEsim)
+        b2, flow2 = net.maxFlow(source, sink) #b is total flow, flow is flow on each link
+        UE = copy.deepcopy(flow2)                
         
+        net.LinearInterpolation(SO, UE, Routing_Impact)
         b, flow = net.maxFlow(source, sink) #b is total flow, flow is flow on each link
-                        
+        
         net.Time_Flow[t] = copy.deepcopy(flow)
         net.Time_B[t] = copy.deepcopy(b)
         net.Time_Demand[t] = copy.deepcopy(Demand[t])
-        net.Time_Capacity[t] = copy.deepcopy(net.capacity)
+        #net.Time_Capacity[t] = copy.deepcopy(net.capacity)
     
     
         for (i,j) in Critical:
             if flow[i][j] == net.BASE_capacity[i][j]:
-                Critical[i,j] = t      
+                Critical[i,j] += 1
                 
         Excess = 0
         for key in Demand[t]:
@@ -75,8 +84,9 @@ def InitializeMaxFlowIter(Demand, NET_FILE, LINKS_FILE, TICK_SIZE, incident_para
         cumulative_arrive = cumulative_depart - queue_len
 
         LastExcess = Excess
+        #print(t)
         t += 1
-        
+    
     convert_network.maxflow_to_plot(net,
                                 Critical,
                                 coordinate,
@@ -99,7 +109,8 @@ def maxFlowIterRun(net, Demand, TICK_SIZE, UEsim, demand_file, tntp_file, flows_
     total_delay = 0
     stats = {}
     stats['full profile'] = []
-    EndTime = 0
+    EndTime = 288
+
     
     source = 0
     sink = 1
@@ -118,7 +129,7 @@ def maxFlowIterRun(net, Demand, TICK_SIZE, UEsim, demand_file, tntp_file, flows_
         for key in Demand[t]:
             ThisIn += Demand[t][key]
 
-        if t in net.Time_Capacity.keys():
+        if t in net.Time_Demand.keys():
             if Demand[t] == net.Time_Demand[t]:
                 update = 0
             else:
@@ -129,26 +140,24 @@ def maxFlowIterRun(net, Demand, TICK_SIZE, UEsim, demand_file, tntp_file, flows_
         net.capacity = copy.deepcopy(net.BASE_capacity)
         update = max(update, net.apply_incidents(t))  #apply_incidents updates net.capacity and returns whether this impacts flow at this timestep
 
-        if update == 0:   ######################### The demand and capacities are the same as the initilization #############################
-            net.capacity = net.Time_Capacity[t]
+        if update == 0 and t<288:   ######################### The demand and capacities are the same as the initilization and still within 3-day window#############################
+            #net.capacity = net.Time_Capacity[t]
             b = net.Time_B[t]
             flow = net.Time_Flow[t]
-
-        else:     #########################New Demands or Capacities, need to update ##########################
-            
-            if t+130 in net.Time_Capacity.keys(): #130 15-minute timesteps lookback heuristic calibrated to peak demand in scenario 1, can be adjusted based on scenario
+        else:     #########################New Demands or Capacities, need to update (also here if outside 3 day window for consistency with no incidents solution) ##########################
+            if t+130 in net.Time_Flow.keys(): #130 15-minute timesteps lookback heuristic calibrated to peak demand in scenario 1, can be adjusted based on scenario
                 EndTime = t
-                net.capacity = copy.deepcopy(net.Time_Capacity[t])
-                net.UpdateCapacitiesFromBaseFlow(net.Time_Flow[t])
-                net.apply_incidents(t)
-                b, flow = net.maxFlow(source, sink) 
-            else: 
-                net.capacity = copy.deepcopy(net.Time_Capacity[EndTime])
-                net.UpdateCapacitiesFromBaseFlow(net.Time_Flow[EndTime])
+                net.capacity = copy.deepcopy(net.Time_Flow[t])
+                #net.UpdateCapacitiesFromBaseFlow(net.Time_Flow[t])
                 net.UpdateCapacitiesFromNewDemand(t,Demand)
                 net.apply_incidents(t)
                 b, flow = net.maxFlow(source, sink) 
-                
+            else: 
+                net.capacity = copy.deepcopy(net.Time_Flow[EndTime])
+                #net.UpdateCapacitiesFromBaseFlow(net.Time_Flow[EndTime])
+                net.UpdateCapacitiesFromNewDemand(t,Demand)
+                net.apply_incidents(t)
+                b, flow = net.maxFlow(source, sink) 
         for i in range(len(flow)):
             for j in range(len(flow[i])):        
                 cumulative_moving += flow[i][j]*net.BASE_TT[i][j] 
@@ -187,50 +196,3 @@ def maxFlowIterRun(net, Demand, TICK_SIZE, UEsim, demand_file, tntp_file, flows_
     stats['total incident capacity drop'] = capacity
     
     return stats
-
-
-
-def run_max_flow(Demand, NET_FILE, LINKS_FILE, TICK_SIZE, incident_params, demand_file, tntp_file, flows_file, tntp_params_file, link_data_file, coordinate):
-    #---------------------------------------------------------------------------
-    print("Initializing...")
-    ###################### Initialize Net ###############################  
-    net = iGraphNetwork.iGraphNetwork(NET_FILE, LINKS_FILE, incident_params, TICK_SIZE)
-    source = 0
-    sink = 1
-
-    sources = np.linspace(2,111,110)
-
-    t = 1
-    maxflow = copy.deepcopy(Demand[t])
-    allDemand = copy.deepcopy(Demand[t])
-
-    for key in maxflow:
-        maxflow[key] = 0
-        allDemand[key] = 0
-    TotalDemand = 0
-
-    for time in Demand:
-        for key in Demand[t]:
-            allDemand[key] += Demand[time][key]
-            TotalDemand += Demand[time][key]
-
-    NewDemand = copy.deepcopy(Demand)
-    for key in NewDemand[t]:
-        NewDemand[t][key] = 100000000
-
-    net.UpdateCapacitiesFromDemand(demand_file, tntp_file, flows_file, tntp_params_file, t, NewDemand, 0, link_data_file)
-    b, flow = net.maxFlow(source, sink) #b is total flow, flow is flow on each link
-
-    for key in Demand[t]:
-        maxflow[key] = flow[0][key]/b*TotalDemand
-
-
-    print('TOTAL DEMAND')
-    print(TotalDemand)
-    print('DEMAND')
-    print(Demand[t])
-    print(allDemand)
-    print('FLOW')
-    print(maxflow)   
-    
-    return

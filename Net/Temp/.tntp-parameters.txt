@@ -1,0 +1,7 @@
+<NETWORK FILE> NetUpdate/Temp/.tntp-net.txt
+<TRIPS FILE> NetUpdate/houston_input_2.ods
+<FLOWS FILE> NetUpdate/Temp/.flows.txt
+<DATA PATH>
+<FILE PATH>
+<CONVERGENCE GAP> 1e-2
+<MAX ITERATIONS> 10
