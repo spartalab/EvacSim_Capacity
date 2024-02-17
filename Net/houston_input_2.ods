@@ -6,7 +6,7 @@ Origin 3
 Origin 4
 1: 0.0
 Origin 5
-1: 1
+1: 1.0000000000072689
 Origin 6
 1: 0.0
 Origin 7
@@ -52,7 +52,7 @@ Origin 26
 Origin 27
 1: 0.0
 Origin 28
-1: 3
+1: 3.000000000007219
 Origin 29
 1: 0.0
 Origin 30
@@ -68,7 +68,7 @@ Origin 34
 Origin 35
 1: 0.0
 Origin 36
-1: 1
+1: 1.0000000137579406
 Origin 37
 1: 0.0
 Origin 38
@@ -80,7 +80,7 @@ Origin 40
 Origin 41
 1: 0.0
 Origin 42
-1: 5
+1: 5.000000000007276
 Origin 43
 1: 0.0
 Origin 44
@@ -100,7 +100,7 @@ Origin 50
 Origin 51
 1: 0.0
 Origin 52
-1: 1
+1: 1.0000000000070486
 Origin 53
 1: 0.0
 Origin 54
@@ -136,7 +136,7 @@ Origin 68
 Origin 69
 1: 0.0
 Origin 70
-1: 19
+1: 19.00000447521596
 Origin 71
 1: 0.0
 Origin 72
@@ -198,7 +198,7 @@ Origin 99
 Origin 100
 1: 0.0
 Origin 101
-1: 4
+1: 4.000000000007162
 Origin 102
 1: 0.0
 Origin 103
